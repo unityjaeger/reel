@@ -16,7 +16,7 @@ An immutable, packed representation of a `KeyframeSequence`.
 | Field | Meaning |
 | --- | --- |
 | `length` | Last source keyframe time, including marker-only keyframes |
-| `pose_length` | Last keyframe time that contains poses; `0` when the sequence has no poses |
+| `pose_length` | Last keyframe time that contains poses, `0` when the sequence has no poses |
 | `looped` | Source `KeyframeSequence.Loop` |
 | `priority` | Source priority, with `Core` remapped to `-1` |
 | `channels` | Per-target spans into the packed key arrays |
