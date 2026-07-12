@@ -186,14 +186,16 @@ const function load_keyframe_sequence(sequence: KeyframeSequence): AnimationAsse
 		return a.Time < b.Time
 	end)
 
+	if #keyframes == 2 and keyframes[1].Time ~= 0 then
+		error("unsupported KeyframeSequence, only 2 keyframes exist and neither of them are at Time = 0")
+	end
+
 	local pose_keys_by_name: PoseKeyBuckets = {}
 	local first_path_by_name: { [string]: string } = {}
 	local markers: { Marker } = {}
 
 	local length = 0
 	local pose_length = 0
-	local pose_keyframe_count = 0
-	local first_pose_keyframe_time: number? = nil
 
 	for _, keyframe in keyframes do
 		for _, marker: KeyframeMarker in keyframe:GetMarkers() do
@@ -212,22 +214,11 @@ const function load_keyframe_sequence(sequence: KeyframeSequence): AnimationAsse
 		end
 
 		pose_length = length
-		pose_keyframe_count += 1
-		if first_pose_keyframe_time == nil then
-			first_pose_keyframe_time = length
-		end
 
 		local seen_at_time: { [string]: string } = {}
 
 		for _, root_pose: Pose in poses do
 			read_pose_tree(root_pose, keyframe.Time, pose_keys_by_name, seen_at_time, first_path_by_name, "")
-		end
-	end
-
-	if pose_keyframe_count == 2 then
-		assert(first_pose_keyframe_time ~= nil)
-		if first_pose_keyframe_time ~= 0 then
-			error("unsupported KeyframeSequence, only 2 pose keyframes exist and neither of them are at Time = 0")
 		end
 	end
 

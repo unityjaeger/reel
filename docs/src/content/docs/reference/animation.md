@@ -78,7 +78,7 @@ If a channel begins after time zero, its first key is duplicated at zero.
 
 Duplicate target names at one timestamp, ambiguous target paths across timestamps, and duplicate or descending channel times are rejected.
 
-A sequence with exactly two pose-bearing keyframes whose first pose keyframe is not at time zero is also rejected. Marker-only keyframes do not count toward this validation.
+A sequence with exactly two source keyframes whose first keyframe is not at time zero is also rejected. Markers and poses both count because this preserves the source shape that avoids the unsupported two-keyframe behavior.
 
 Supported pose easing styles/directions are all the easing styles that roblox natively supports for KeyframeSequences.
 

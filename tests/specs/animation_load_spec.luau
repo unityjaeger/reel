@@ -162,7 +162,7 @@ return function(t: any, reel: any)
 		with_destroy(sequence, function()
 			t.errors(function()
 				animation_load.load_keyframe_sequence(sequence)
-			end, "only 2 pose keyframes")
+			end, "only 2 keyframes")
 		end)
 	end)
 
@@ -170,37 +170,58 @@ return function(t: any, reel: any)
 		local sequence = fixtures.sequence({
 			marker_keyframe(1, "Footstep", "Left"),
 			marker_keyframe(2, "Footstep", "Right"),
+			marker_keyframe(3, "Finished", ""),
 		})
 
 		with_destroy(sequence, function()
 			local asset = animation_load.load_keyframe_sequence(sequence)
 
-			t.equal(asset.length, 2)
+			t.equal(asset.length, 3)
 			t.equal(asset.pose_length, 0)
 			t.equal(#asset.channels, 0)
 			t.equal(#asset.key_times, 0)
-			t.equal(#asset.markers, 2)
+			t.equal(#asset.markers, 3)
 			t.equal(asset.markers[1].time, 1)
 			t.equal(asset.markers[1].name, "Footstep")
 			t.equal(asset.markers[1].value, "Left")
 			t.equal(asset.markers[2].time, 2)
 			t.equal(asset.markers[2].value, "Right")
+			t.equal(asset.markers[3].time, 3)
+			t.equal(asset.markers[3].name, "Finished")
 			t.truthy(table.isfrozen(asset.markers))
 			t.truthy(table.isfrozen(asset.markers[1]))
 		end)
 	end)
 
-	test("animation_load still rejects two late pose keyframes when marker-only keys exist", function()
+	test("animation_load rejects exactly two late marker-only keyframes", function()
 		local sequence = fixtures.sequence({
-			marker_keyframe(0, "Started", ""),
-			fixtures.keyframe(1, { fixtures.pose("Arm", CFrame.new(1, 0, 0)) }),
-			fixtures.keyframe(2, { fixtures.pose("Arm", CFrame.new(2, 0, 0)) }),
+			marker_keyframe(1, "Footstep", "Left"),
+			marker_keyframe(2, "Footstep", "Right"),
 		})
 
 		with_destroy(sequence, function()
 			t.errors(function()
 				animation_load.load_keyframe_sequence(sequence)
-			end, "only 2 pose keyframes")
+			end, "only 2 keyframes")
+		end)
+	end)
+
+	test("animation_load accepts two late pose keyframes with a third marker-only keyframe", function()
+		local sequence = fixtures.sequence({
+			fixtures.keyframe(1, { fixtures.pose("Arm", CFrame.new(1, 0, 0)) }),
+			fixtures.keyframe(2, { fixtures.pose("Arm", CFrame.new(2, 0, 0)) }),
+			marker_keyframe(3, "Finished", ""),
+		})
+
+		with_destroy(sequence, function()
+			local asset = animation_load.load_keyframe_sequence(sequence)
+			local arm = asset.channels[asset.name_to_channel.Arm]
+
+			t.equal(asset.length, 3)
+			t.equal(asset.pose_length, 2)
+			t.equal(arm.count, 3)
+			t.equal(#asset.markers, 1)
+			t.equal(asset.markers[1].time, 3)
 		end)
 	end)
 
