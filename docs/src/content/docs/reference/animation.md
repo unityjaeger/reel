@@ -15,15 +15,39 @@ An immutable, packed representation of a `KeyframeSequence`.
 
 | Field | Meaning |
 | --- | --- |
-| `length` | Last keyframe time |
+| `length` | Last source keyframe time, including marker-only keyframes |
+| `pose_length` | Last keyframe time that contains poses; `0` when the sequence has no poses |
 | `looped` | Source `KeyframeSequence.Loop` |
 | `priority` | Source priority, with `Core` remapped to `-1` |
 | `channels` | Per-target spans into the packed key arrays |
 | `name_to_channel` | Target name to channel index lookup |
+| `markers` | Dense, time-ordered `Marker` records from source keyframes |
 | packed key arrays | Times, inverse durations, positions, quaternions, and easing functions |
 
 Assets and their internal arrays are frozen after loading. 
 One asset can be shared by every compatible character.
+
+### `Marker`
+
+```luau
+type Marker = {
+	time: number,
+	name: string,
+	value: string,
+}
+```
+
+Each `KeyframeMarker` becomes one immutable record in `asset.markers`.
+Markers are separate from pose channels: they never create packed solver keys or an animation binding entry.
+
+A marker-only sequence therefore has an empty `channels` array and no packed pose data, while its `markers` and `length` are still available.
+In a mixed sequence, marker-only keyframes likewise do not affect solver keys.
+A marker after the final pose extends `length`, sampling continues to hold the last pose until that time.
+
+The solver does not dispatch marker events or retain playback history.
+A player should consume `asset.markers` as its time position advances, typically using the interval `previous_time < marker.time <= current_time`.
+When looping across the end, query the tail of the clip and then its beginning as two intervals.
+This keeps repeated, out-of-order, and parallel solver samples side-effect free.
 
 ## `AnimationBinding`
 
@@ -54,7 +78,7 @@ If a channel begins after time zero, its first key is duplicated at zero.
 
 Duplicate target names at one timestamp, ambiguous target paths across timestamps, and duplicate or descending channel times are rejected.
 
-A sequence with exactly two keyframes whose first keyframe is not at time zero is also rejected.
+A sequence with exactly two pose-bearing keyframes whose first pose keyframe is not at time zero is also rejected. Marker-only keyframes do not count toward this validation.
 
 Supported pose easing styles/directions are all the easing styles that roblox natively supports for KeyframeSequences.
 

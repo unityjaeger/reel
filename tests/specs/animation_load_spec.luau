@@ -25,6 +25,15 @@ local function channel_key_index(asset: any, name: string, offset: number): numb
 	return channel.key_start + offset
 end
 
+local function marker_keyframe(time: number, name: string, value: string): Keyframe
+	local keyframe = fixtures.keyframe(time, {})
+	local marker = Instance.new("KeyframeMarker")
+	marker.Name = name
+	marker.Value = value
+	keyframe:AddMarker(marker)
+	return keyframe
+end
+
 return function(t: any, reel: any)
 	local test = t.test
 	local animation_load = reel.animation
@@ -153,7 +162,45 @@ return function(t: any, reel: any)
 		with_destroy(sequence, function()
 			t.errors(function()
 				animation_load.load_keyframe_sequence(sequence)
-			end, "only 2 keyframes")
+			end, "only 2 pose keyframes")
+		end)
+	end)
+
+	test("animation_load retains marker-only keyframes without creating solver keys", function()
+		local sequence = fixtures.sequence({
+			marker_keyframe(1, "Footstep", "Left"),
+			marker_keyframe(2, "Footstep", "Right"),
+		})
+
+		with_destroy(sequence, function()
+			local asset = animation_load.load_keyframe_sequence(sequence)
+
+			t.equal(asset.length, 2)
+			t.equal(asset.pose_length, 0)
+			t.equal(#asset.channels, 0)
+			t.equal(#asset.key_times, 0)
+			t.equal(#asset.markers, 2)
+			t.equal(asset.markers[1].time, 1)
+			t.equal(asset.markers[1].name, "Footstep")
+			t.equal(asset.markers[1].value, "Left")
+			t.equal(asset.markers[2].time, 2)
+			t.equal(asset.markers[2].value, "Right")
+			t.truthy(table.isfrozen(asset.markers))
+			t.truthy(table.isfrozen(asset.markers[1]))
+		end)
+	end)
+
+	test("animation_load still rejects two late pose keyframes when marker-only keys exist", function()
+		local sequence = fixtures.sequence({
+			marker_keyframe(0, "Started", ""),
+			fixtures.keyframe(1, { fixtures.pose("Arm", CFrame.new(1, 0, 0)) }),
+			fixtures.keyframe(2, { fixtures.pose("Arm", CFrame.new(2, 0, 0)) }),
+		})
+
+		with_destroy(sequence, function()
+			t.errors(function()
+				animation_load.load_keyframe_sequence(sequence)
+			end, "only 2 pose keyframes")
 		end)
 	end)
 

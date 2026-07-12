@@ -18,13 +18,22 @@ export type Channel = {
 	read key_start: number,
 }
 
+export type Marker = {
+	read time: number,
+	read name: string,
+	read value: string,
+}
+
 export type AnimationAsset = {
 	read length: number,
+	read pose_length: number,
 	read looped: boolean,
 	read priority: number,
 
 	read channels: { Channel },
 	read name_to_channel: { [string]: number },
+
+	read markers: { Marker },
 
 	read key_times: { number },
 	read key_inv_durations: { number },
@@ -177,18 +186,48 @@ const function load_keyframe_sequence(sequence: KeyframeSequence): AnimationAsse
 		return a.Time < b.Time
 	end)
 
-	if #keyframes == 2 and keyframes[1].Time ~= 0 then
-		error("unsupported KeyframeSequence, only 2 keyframes exist and neither of them are at Time = 0")
-	end
-
 	local pose_keys_by_name: PoseKeyBuckets = {}
 	local first_path_by_name: { [string]: string } = {}
+	local markers: { Marker } = {}
+
+	local length = 0
+	local pose_length = 0
+	local pose_keyframe_count = 0
+	local first_pose_keyframe_time: number? = nil
 
 	for _, keyframe in keyframes do
+		for _, marker: KeyframeMarker in keyframe:GetMarkers() do
+			table.insert(markers, table.freeze({
+				time = keyframe.Time,
+				name = marker.Name,
+				value = marker.Value,
+			}))
+		end
+
+		length = keyframe.Time
+
+		local poses = keyframe:GetPoses()
+		if #poses == 0 then
+			continue
+		end
+
+		pose_length = length
+		pose_keyframe_count += 1
+		if first_pose_keyframe_time == nil then
+			first_pose_keyframe_time = length
+		end
+
 		local seen_at_time: { [string]: string } = {}
 
-		for _, root_pose in keyframe:GetPoses() :: { Pose } do
+		for _, root_pose: Pose in poses do
 			read_pose_tree(root_pose, keyframe.Time, pose_keys_by_name, seen_at_time, first_path_by_name, "")
+		end
+	end
+
+	if pose_keyframe_count == 2 then
+		assert(first_pose_keyframe_time ~= nil)
+		if first_pose_keyframe_time ~= 0 then
+			error("unsupported KeyframeSequence, only 2 pose keyframes exist and neither of them are at Time = 0")
 		end
 	end
 
@@ -220,8 +259,6 @@ const function load_keyframe_sequence(sequence: KeyframeSequence): AnimationAsse
 		name_to_channel[name] = channel_index
 	end
 
-	local length = if #keyframes > 0 then keyframes[#keyframes].Time else 0
-
 	local priority = sequence.Priority
 	local priority_value = priority.Value
 	if priority == Enum.AnimationPriority.Core then
@@ -231,6 +268,7 @@ const function load_keyframe_sequence(sequence: KeyframeSequence): AnimationAsse
 
 	table.freeze(channels)
 	table.freeze(name_to_channel)
+	table.freeze(markers)
 	table.freeze(key_times)
 	table.freeze(key_inv_durations)
 	table.freeze(key_positions)
@@ -240,11 +278,14 @@ const function load_keyframe_sequence(sequence: KeyframeSequence): AnimationAsse
 
 	return table.freeze({
 		length = length,
+		pose_length = pose_length,
 		looped = sequence.Loop,
 		priority = priority_value,
 
 		channels = channels,
 		name_to_channel = name_to_channel,
+
+		markers = markers,
 
 		key_times = key_times,
 		key_inv_durations = key_inv_durations,
