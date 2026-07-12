@@ -331,7 +331,7 @@ const function solve_single_track(rig: Rig, track: PreparedTrack)
 	local binding = state.binding
 	local active_count = binding.active_count
 
-	if not (track_weight > EPS) then
+	if track_weight <= EPS then
 		for rig_index = 1, rig_count do
 			transforms[rig_index] = IDENTITY
 		end
@@ -432,7 +432,7 @@ const function solve_prepared(rig: Rig, prepared: PreparedPlaying)
 			local track = tracks[track_index]
 			local track_weight = track.state.weight
 
-			if not (track_weight > EPS) then
+			if track_weight <= EPS then
 				continue
 			end
 
@@ -474,7 +474,7 @@ const function solve_prepared(rig: Rig, prepared: PreparedPlaying)
 			local state = track.state
 			local track_weight = state.weight
 
-			if not (track_weight > EPS) then
+			if track_weight <= EPS then
 				continue
 			end
 
@@ -557,7 +557,7 @@ const function apply_delta_prepared(rig: Rig, prepared: PreparedDelta)
 		local state = track.state
 		local weight = state.weight
 
-		if not (weight > EPS) then
+		if weight <= EPS then
 			continue
 		end
 
