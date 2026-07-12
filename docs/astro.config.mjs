@@ -8,6 +8,7 @@ export default defineConfig({
 	base: "/reel/",
 	integrations: [
 		starlight({
+			social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/unityjaeger/reel' }],
 			title: 'Reel',
 			description: 'Low-level Roblox animation solving for local playback and world-space queries.',
 			sidebar: [
