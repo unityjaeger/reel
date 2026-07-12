@@ -4,6 +4,8 @@ import starlight from '@astrojs/starlight';
 
 // https://astro.build/config
 export default defineConfig({
+	site: "https://unityjaeger.github.io",
+	base: "/reel/",
 	integrations: [
 		starlight({
 			title: 'Reel',
