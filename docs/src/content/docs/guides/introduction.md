@@ -12,7 +12,7 @@ Either grab the .rbxm from the [latest release](https://github.com/unityjaeger/r
 
 or get it through wally:
 ```
-TODO
+reel = "unityjaeger/reel@0.1.0"
 ```
 
 :::note
