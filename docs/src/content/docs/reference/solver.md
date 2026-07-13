@@ -23,6 +23,25 @@ type PlayingTrack = {
 	asset: AnimationAsset,
 	state: AnimationState,
 }
+
+type PreparedTrack = {
+	asset: AnimationAsset,
+	state: AnimationState,
+	priority: number,
+}
+
+type PriorityGroup = {
+	start: number,
+	stop: number,
+}
+
+type PreparedPlaying = {
+	count: number,
+	tracks: { PreparedTrack },
+
+	group_count: number,
+	groups: { PriorityGroup },
+}
 ```
 
 `time_position` and `weight` are live inputs.
@@ -68,6 +87,17 @@ type DeltaTrack = {
 	asset: AnimationAsset,
 	state: DeltaState,
 	mode: DeltaMode,
+}
+
+export type PreparedDeltaTrack = {
+	asset: AnimationAsset,
+	state: DeltaState,
+	inverse: boolean,
+}
+
+export type PreparedDelta = {
+	count: number,
+	tracks: { PreparedDeltaTrack },
 }
 ```
 
