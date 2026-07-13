@@ -128,8 +128,8 @@ local function sequence(keyframes: { Keyframe }, options: SequenceOptions?): Key
 	return result
 end
 
--- Builds the same frozen packed shape returned by animation_load.
--- This intentionally bypasses the loader so solver tests isolate solver behavior.
+--builds the same frozen packed shape returned by animation_load
+--this intentionally bypasses the loader so solver tests isolate solver behavior
 local function asset(
 	channels_in: { AssetChannel },
 	priority: number?,
