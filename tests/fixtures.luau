@@ -23,6 +23,12 @@ export type AssetChannel = {
 	keys: { AssetKey },
 }
 
+export type AssetMarker = {
+	read time: number,
+	read name: string,
+	read value: string,
+}
+
 export type BindingPair = {
 	rig_index: number,
 	channel_index: number,
@@ -122,12 +128,17 @@ local function sequence(keyframes: { Keyframe }, options: SequenceOptions?): Key
 	return result
 end
 
-
---builds the same packed shape returned by animation_load
---this intentionally bypasses the loader so solver tests isolate solver behavior
-local function asset(channels_in: { AssetChannel }, priority: number?, looped: boolean?): any
+-- Builds the same frozen packed shape returned by animation_load.
+-- This intentionally bypasses the loader so solver tests isolate solver behavior.
+local function asset(
+	channels_in: { AssetChannel },
+	priority: number?,
+	looped: boolean?,
+	markers_in: { AssetMarker }?
+): any
 	local channels = table.create(#channels_in)
 	local name_to_channel: { [string]: number } = {}
+	local markers: { AssetMarker } = {}
 	local key_times: { number } = {}
 	local key_inv_durations: { number } = {}
 	local key_positions: { vector } = {}
@@ -144,10 +155,10 @@ local function asset(channels_in: { AssetChannel }, priority: number?, looped: b
 
 		local key_start = #key_times + 1
 		local key_count = #keys
-		channels[channel_index] = {
+		channels[channel_index] = table.freeze({
 			count = key_count,
 			key_start = key_start,
-		}
+		})
 		name_to_channel[channel_in.name] = channel_index
 
 		for key_offset, key in keys do
@@ -174,19 +185,48 @@ local function asset(channels_in: { AssetChannel }, priority: number?, looped: b
 		end
 	end
 
-	return {
+	local pose_length = length
+	for _, marker_in in markers_in or {} do
+		table.insert(markers, table.freeze({
+			time = marker_in.time,
+			name = marker_in.name,
+			value = marker_in.value,
+		}))
+
+		if marker_in.time > length then
+			length = marker_in.time
+		end
+	end
+
+	table.sort(markers, function(a: AssetMarker, b)
+		return a.time < b.time
+	end)
+
+	table.freeze(channels)
+	table.freeze(name_to_channel)
+	table.freeze(markers)
+	table.freeze(key_times)
+	table.freeze(key_inv_durations)
+	table.freeze(key_positions)
+	table.freeze(key_quat_vectors)
+	table.freeze(key_quat_scalars)
+	table.freeze(key_easing_functions)
+
+	return table.freeze({
 		length = length,
+		pose_length = pose_length,
 		looped = looped == true,
 		priority = priority or 0,
 		channels = channels,
 		name_to_channel = name_to_channel,
+		markers = markers,
 		key_times = key_times,
 		key_inv_durations = key_inv_durations,
 		key_positions = key_positions,
 		key_quat_vectors = key_quat_vectors,
 		key_quat_scalars = key_quat_scalars,
 		key_easing_functions = key_easing_functions,
-	}
+	})
 end
 
 local function binding(pairs: { BindingPair }): any
