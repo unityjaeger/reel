@@ -13,14 +13,19 @@ export default defineConfig({
 			description: 'Low-level Roblox animation solving for local playback and world-space queries.',
 			sidebar: [
 				{
+					label: 'Reference',
+					items: [{ autogenerate: { directory: 'reference' } }],
+				},
+				{
 					label: 'Guides',
 					items: [
 						{ label: 'Intro', slug: 'guides/introduction' },
+						{ label: 'Shared Rigs', slug: 'guides/shared_rigs' },
+						{ label: 'Multiple Tracks', slug: 'guides/multiple_tracks' },
+						{ label: 'Delta Layers', slug: 'guides/delta_layers' },
+						{ label: 'World Transforms', slug: 'guides/world_transforms' },
+						{ label: 'Performance', slug: 'guides/performance' }
 					],
-				},
-				{
-					label: 'Reference',
-					items: [{ autogenerate: { directory: 'reference' } }],
 				},
 			],
 		}),

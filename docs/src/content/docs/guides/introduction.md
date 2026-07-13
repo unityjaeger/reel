@@ -15,12 +15,14 @@ or get it through wally:
 TODO
 ```
 
+:::note
+Read the [reference](/reel/reference/rig/) first to familiarize yourself with the library.
+:::
+
 # Use Cases
 - no instances needed, enabling things like ping compensation for hit detection
 - additive and subtractive animation blending
 - full control, if you want specific behavior then you can implement that into a custom player
-
-# Read the [reference](https://unityjaeger.github.io/reel/reference/rig/) first to familiarize yourself with the library.
 
 # Usage Example
 Minimal playback example.
