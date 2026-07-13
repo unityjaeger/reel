@@ -1,5 +1,5 @@
 # Reel
 
-TODO
+Custom animation solver for roblox.
 
-https://unityjaeger.github.io/reel/
+Documentation: https://unityjaeger.github.io/reel/
