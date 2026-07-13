@@ -1,0 +1,18 @@
+[package]
+name = "unityjaeger/reel"
+description = "Custom animation solver"
+authors = ["unityjaeger"]
+version = "0.1.0"
+registry = "https://github.com/UpliftGames/wally-index"
+realm = "shared"
+license = "MIT"
+repository = "https://github.com/unityjaeger/reel"
+include = [
+	"default.project.json",
+	"wally.toml",
+    "wally.lock",
+	"LICENSE",
+    "src",
+    "src/**/*"
+]
+exclude = ["**"]
