@@ -4,7 +4,7 @@ description: Explains how to use additive/subtractive blending.
 ---
 
 Delta clips are authored relative to 'CFrame.identity'.
-Identity means no effect, translation and rotation are the offset applied to the current local transform.
+Identity means no effect, translation and rotation are an offset applied to the current local transform.
 
 ```luau
 local delta_state = {

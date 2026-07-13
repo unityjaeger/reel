@@ -22,7 +22,7 @@ Its arrays use descriptor indices, which are ordered parent before child.
 | `is_bone` | Whether the target uses Bone world-transform math |
 | `name_to_index` | Target-name lookup |
 | `c0`, `c1_inv` | Motor6D static offsets |
-| `bind` | Bone bind `CFrame` |
+| `bind` | Bone `CFrame` |
 
 Motor6D targets use `Part1.Name`, Bone targets use `Bone.Name`.
 Target names must be unique across the whole rig.
