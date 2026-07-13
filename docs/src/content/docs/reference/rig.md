@@ -2,7 +2,7 @@
 title: rig
 description: Static rig descriptions and per-rig states.
 sidebar:
- order: 2
+ order: 1
 ---
 
 ```luau

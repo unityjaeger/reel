@@ -2,7 +2,7 @@
 title: solver
 description: Solve a list of animations.
 sidebar:
- order: 1
+ order: 3
 ---
 
 ```luau

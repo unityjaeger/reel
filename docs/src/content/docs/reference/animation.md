@@ -2,7 +2,7 @@
 title: animation
 description: Packed KeyframeSequence assets.
 sidebar:
- order: 3
+ order: 2
 ---
 
 ```luau
