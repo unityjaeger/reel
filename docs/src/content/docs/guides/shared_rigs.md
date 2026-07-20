@@ -25,16 +25,18 @@ The descriptor and binding are safe to share with every state that has the same 
 Binding is intentionally strict about animation-relevant structure. It checks:
 - the total target count
 - globally unique animation target names
-- target presence and target type (`Motor6D` or `Bone`)
+- target presence and target type (joint or `Bone`)
 - the animated parent target of every target
-- Motor6D `C0` and `C1`
+- Motor6D/AnimationConstraint `C0` and `C1`
+- AnimationConstraint `IsKinematic`
 - Bone bind `CFrame` values
 
 The traversal order does not need to match the template. 
-Reel maps actual Motor6D/Bone Instances into descriptor-index order after validation.
+Reel maps actual Motor6D/AnimationConstraint/Bone Instances into descriptor-index order after validation.
+Motor6D and kinematic AnimationConstraint targets may bind to the same descriptor when their animation-relevant layout matches.
 
 Offsets are compared with `CFrame:FuzzyEq`, so harmless floating-point variation is accepted.
-Unrelated data such as a model name, part size, Motor6D Instance name, or an untargeted root `Part0` name does not participate in binding.
+Unrelated data such as a model name, part size, joint Instance name, or an untargeted root `Part0` name does not participate in binding.
 
 ## Offline or custom states
 Use `rig_api.create_rig_state(desc, motors, bones)` only when another system has already produced Instance arrays in descriptor-index order, or when no Instances are needed.

@@ -43,6 +43,11 @@ export type AnimationAsset = {
 	read key_easing_functions: { (number) -> number },
 }
 
+export type MarkerAsset = {
+	read length: number,
+	read markers: { Marker },
+}
+
 export type AnimationBinding = {
 	read active_count: number,
 	read active_rig_indices: { number },
@@ -124,6 +129,41 @@ end
 
 type PoseKeyBuckets = { [string]: { PoseKey } }
 
+const function get_sequence_keyframes(sequence: KeyframeSequence): { Keyframe }
+	local keyframes = sequence:GetKeyframes() :: { Keyframe }
+
+	table.sort(keyframes, function(a: Keyframe, b: Keyframe)
+		return a.Time < b.Time
+	end)
+
+	if #keyframes == 2 and keyframes[1].Time ~= 0 then
+		error("unsupported KeyframeSequence, only 2 keyframes exist and neither of them are at Time = 0")
+	end
+
+	return keyframes
+end
+
+const function read_markers(keyframes: { Keyframe }): (number, { Marker })
+	local markers: { Marker } = {}
+	local length = 0
+
+	for _, keyframe in keyframes do
+		for _, marker: KeyframeMarker in keyframe:GetMarkers() do
+			table.insert(markers, table.freeze({
+				time = keyframe.Time,
+				name = marker.Name,
+				value = marker.Value,
+			}))
+		end
+
+		length = keyframe.Time
+	end
+
+	table.freeze(markers)
+
+	return length, markers
+end
+
 const function add_pose_key(out: PoseKeyBuckets, name: string, key: PoseKey)
 	local keys = out[name]
 	if keys == nil then
@@ -180,40 +220,21 @@ const function read_pose_tree(
 end
 
 const function load_keyframe_sequence(sequence: KeyframeSequence): AnimationAsset
-	local keyframes = sequence:GetKeyframes() :: { Keyframe }
-
-	table.sort(keyframes, function(a: Keyframe, b: Keyframe)
-		return a.Time < b.Time
-	end)
-
-	if #keyframes == 2 and keyframes[1].Time ~= 0 then
-		error("unsupported KeyframeSequence, only 2 keyframes exist and neither of them are at Time = 0")
-	end
+	local keyframes = get_sequence_keyframes(sequence)
+	local length, markers = read_markers(keyframes)
 
 	local pose_keys_by_name: PoseKeyBuckets = {}
 	local first_path_by_name: { [string]: string } = {}
-	local markers: { Marker } = {}
 
-	local length = 0
 	local pose_length = 0
 
 	for _, keyframe in keyframes do
-		for _, marker: KeyframeMarker in keyframe:GetMarkers() do
-			table.insert(markers, table.freeze({
-				time = keyframe.Time,
-				name = marker.Name,
-				value = marker.Value,
-			}))
-		end
-
-		length = keyframe.Time
-
 		local poses = keyframe:GetPoses()
 		if #poses == 0 then
 			continue
 		end
 
-		pose_length = length
+		pose_length = keyframe.Time
 
 		local seen_at_time: { [string]: string } = {}
 
@@ -259,7 +280,6 @@ const function load_keyframe_sequence(sequence: KeyframeSequence): AnimationAsse
 
 	table.freeze(channels)
 	table.freeze(name_to_channel)
-	table.freeze(markers)
 	table.freeze(key_times)
 	table.freeze(key_inv_durations)
 	table.freeze(key_positions)
@@ -287,7 +307,7 @@ const function load_keyframe_sequence(sequence: KeyframeSequence): AnimationAsse
 	})
 end
 
-local function bind_animation(asset: AnimationAsset, rig_or_desc: rig_load.Rig | rig_load.RigDesc): AnimationBinding
+const function bind_animation(asset: AnimationAsset, rig_or_desc: rig_load.Rig | rig_load.RigDesc): AnimationBinding
 	local value = rig_or_desc :: any
 	local desc: rig_load.RigDesc = value.desc or value
 
@@ -315,7 +335,17 @@ local function bind_animation(asset: AnimationAsset, rig_or_desc: rig_load.Rig |
 	})
 end
 
+const function extract_markers(sequence: KeyframeSequence): MarkerAsset
+	local length, markers = read_markers(get_sequence_keyframes(sequence))
+
+	return table.freeze({
+		length = length,
+		markers = markers,
+	})
+end
+
 return {
 	load_keyframe_sequence = load_keyframe_sequence,
-	bind_animation = bind_animation
+	extract_markers = extract_markers,
+	bind_animation = bind_animation,
 }

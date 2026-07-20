@@ -38,6 +38,64 @@ local function motor(part0: BasePart?, part1: BasePart?, parent: Instance, name:
 	return result
 end
 
+local function animation_constraint(
+	part0: BasePart?,
+	part1: BasePart?,
+	parent: Instance,
+	name: string?,
+	c0: CFrame?,
+	c1: CFrame?,
+	is_kinematic: boolean?
+): AnimationConstraint
+	local result = Instance.new("AnimationConstraint")
+	result.Name = name or "Joint"
+	result.IsKinematic = is_kinematic ~= false
+
+	if part0 ~= nil then
+		local attachment0 = Instance.new("Attachment")
+		attachment0.Name = result.Name .. "Attachment0"
+		attachment0.CFrame = c0 or CFrame.identity
+		attachment0.Parent = part0
+		result.Attachment0 = attachment0
+	end
+
+	if part1 ~= nil then
+		local attachment1 = Instance.new("Attachment")
+		attachment1.Name = result.Name .. "Attachment1"
+		attachment1.CFrame = c1 or CFrame.identity
+		attachment1.Parent = part1
+		result.Attachment1 = attachment1
+	end
+
+	result.Parent = parent
+	return result
+end
+
+local function constraint_model(
+	root_c0: CFrame?,
+	root_c1: CFrame?,
+	child_c0: CFrame?,
+	child_c1: CFrame?
+): (Model, { root: Part, middle: Part, leaf: Part, root_joint: AnimationConstraint, child_joint: AnimationConstraint })
+	local model = Instance.new("Model")
+	model.Name = "ConstraintRig"
+
+	local root = part("Root", model)
+	local middle = part("Torso", model)
+	local leaf = part("Arm", model)
+
+	local child_joint = animation_constraint(middle, leaf, model, "Shoulder", child_c0, child_c1, true)
+	local root_joint = animation_constraint(root, middle, model, "RootJoint", root_c0, root_c1, true)
+
+	return model, {
+		root = root,
+		middle = middle,
+		leaf = leaf,
+		root_joint = root_joint,
+		child_joint = child_joint,
+	}
+end
+
 local function sibling_motor_model(reverse: boolean): (Model, { [string]: Motor6D })
 	local model = Instance.new("Model")
 	model.Name = "SiblingRig"
@@ -137,6 +195,48 @@ return function(t: any, reel: any)
 		end)
 	end)
 
+	test("rig_load treats kinematic AnimationConstraints as parent-first animation joints", function()
+		local root_c0 = CFrame.new(1, 0, 0) * CFrame.Angles(0, 0.2, 0)
+		local root_c1 = CFrame.new(0, 1, 0) * CFrame.Angles(0.1, 0, 0)
+		local child_c0 = CFrame.new(0, 2, 0)
+		local child_c1 = CFrame.new(0, 0, 1)
+		local model, handles = constraint_model(root_c0, root_c1, child_c0, child_c1)
+
+		with_destroy(model, function()
+			local rig = rig_load.load_rig(model)
+			local torso_index = rig.desc.name_to_index.Torso
+			local arm_index = rig.desc.name_to_index.Arm
+
+			t.equal(rig.desc.count, 2)
+			t.equal(rig.desc.parent[torso_index], 0)
+			t.equal(rig.desc.parent[arm_index], torso_index)
+			t.equal(rig.desc.is_bone[torso_index], false)
+			t.equal(rig.desc.is_bone[arm_index], false)
+			t.same(rig.motors[torso_index], handles.root_joint)
+			t.same(rig.motors[arm_index], handles.child_joint)
+			t.cframe_near(rig.desc.c0[torso_index], root_c0)
+			t.cframe_near(rig.desc.c1_inv[torso_index], root_c1:Inverse())
+			t.cframe_near(rig.desc.c0[arm_index], child_c0)
+			t.cframe_near(rig.desc.c1_inv[arm_index], child_c1:Inverse())
+		end)
+	end)
+
+	test("rig_load preserves a Motor6D-to-AnimationConstraint hierarchy", function()
+		local model, handles = fixtures.motor_model()
+		handles.child_motor:Destroy()
+		local child_joint = animation_constraint(handles.middle, handles.leaf, model, "Shoulder", nil, nil, true)
+
+		with_destroy(model, function()
+			local rig = rig_load.load_rig(model)
+			local torso_index = rig.desc.name_to_index.Torso
+			local arm_index = rig.desc.name_to_index.Arm
+
+			t.equal(rig.desc.parent[arm_index], torso_index)
+			t.same(rig.motors[torso_index], handles.root_motor)
+			t.same(rig.motors[arm_index], child_joint)
+		end)
+	end)
+
 	test("rig_load builds Bone chains with their authored bind CFrames", function()
 		local root_bind = CFrame.new(0, 1, 0) * CFrame.Angles(0.1, 0, 0)
 		local child_bind = CFrame.new(0, 2, 0) * CFrame.Angles(0, 0.2, 0)
@@ -197,6 +297,31 @@ return function(t: any, reel: any)
 			t.errors(function()
 				rig_load.load_rig(model)
 			end, "nil Part0/Part1")
+		end)
+	end)
+
+	test("rig_load rejects AnimationConstraints with a nil endpoint", function()
+		local model = Instance.new("Model")
+		local root = part("Root", model)
+		animation_constraint(root, nil, model, nil, nil, nil, true)
+
+		with_destroy(model, function()
+			t.errors(function()
+				rig_load.load_rig(model)
+			end, "nil Part0/Part1")
+		end)
+	end)
+
+	test("rig_load rejects non-kinematic AnimationConstraints", function()
+		local model = Instance.new("Model")
+		local root = part("Root", model)
+		local child = part("Child", model)
+		animation_constraint(root, child, model, nil, nil, nil, false)
+
+		with_destroy(model, function()
+			t.errors(function()
+				rig_load.load_rig(model)
+			end, "IsKinematic")
 		end)
 	end)
 
@@ -264,6 +389,35 @@ return function(t: any, reel: any)
 				local index = desc.name_to_index[name]
 				t.same(first.motors[index], expected_motor)
 			end
+		end)
+
+		fixtures.destroy(template)
+		fixtures.destroy(model)
+		if not ok then
+			error(message, 0)
+		end
+	end)
+
+	test("bind_rig accepts equivalent Motor6D and AnimationConstraint layouts", function()
+		local root_c0 = CFrame.new(1, 0, 0)
+		local root_c1 = CFrame.new(0, 1, 0)
+		local child_c0 = CFrame.new(0, 2, 0)
+		local child_c1 = CFrame.new(0, 0, 1)
+		local template = fixtures.motor_model({
+			root_c0 = root_c0,
+			root_c1 = root_c1,
+			child_c0 = child_c0,
+			child_c1 = child_c1,
+		})
+		local model, handles = constraint_model(root_c0, root_c1, child_c0, child_c1)
+
+		local ok, message = protect(function()
+			local desc = rig_load.load_rig_desc(template)
+			local bound = rig_load.bind_rig(desc, model)
+
+			t.same(bound.desc, desc)
+			t.same(bound.motors[desc.name_to_index.Torso], handles.root_joint)
+			t.same(bound.motors[desc.name_to_index.Arm], handles.child_joint)
 		end)
 
 		fixtures.destroy(template)
@@ -409,7 +563,7 @@ return function(t: any, reel: any)
 			{ name = "First" },
 			{ name = "Second", parent = 1 },
 		})
-		local motors = {} :: { Motor6D? }
+		local motors = {} :: { (Motor6D | AnimationConstraint)? }
 		local bones = {} :: { Bone? }
 		local rig = rig_load.create_rig_state(desc, motors, bones)
 

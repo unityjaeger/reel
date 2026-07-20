@@ -16,16 +16,17 @@ Its arrays use descriptor indices, which are ordered parent before child.
 
 | Field | Meaning |
 | --- | --- |
-| `count` | Number of Motor6D/Bone animation targets |
+| `count` | Number of joint/Bone animation targets |
 | `names` | Target name at each descriptor index |
 | `parent` | Parent descriptor index, or `0` for a root |
 | `is_bone` | Whether the target uses Bone world-transform math |
 | `name_to_index` | Target-name lookup |
-| `c0`, `c1_inv` | Motor6D static offsets |
+| `c0`, `c1_inv` | Motor6D or AnimationConstraint static offsets |
 | `bind` | Bone `CFrame` |
 
-Motor6D targets use `Part1.Name`, Bone targets use `Bone.Name`.
+Motor6D and AnimationConstraint targets use `Part1.Name`, Bone targets use `Bone.Name`.
 Target names must be unique across the whole rig.
+AnimationConstraints must have `IsKinematic` enabled.
 
 ## `RigState`
 
@@ -34,13 +35,14 @@ Target names must be unique across the whole rig.
 | Field | Meaning |
 | --- | --- |
 | `desc` | Shared static descriptor |
-| `motors`, `bones` | Sparse Instance arrays aligned to descriptor indices |
+| `motors`, `bones` | Sparse Instance arrays aligned to descriptor indices, `motors` contains Motor6Ds or AnimationConstraints |
 | `transforms` | Current local solver output |
 | `world_transforms` | Optional retained world-output array |
 | `blend_scratch` | Optional native multi-track scratch |
 
 :::note
-`motors` and `bones` are only sparse when both Motor6D's and Bone's are present in the rig.
+`motors` and `bones` are only sparse when both joints and Bones are present in the rig.
+The `motors` name is retained for API compatibility.
 :::
 
 ## Functions
@@ -67,16 +69,17 @@ Builds only the frozen static layout. It retains no template Instances.
 bind_rig(desc: RigDesc, model: Model): RigState
 ```
 
-Validates that `model` is animation-equivalent to `desc`, then returns fresh local state with its Motor6D/Bone references reordered into descriptor-index order.
+Validates that `model` is animation-equivalent to `desc`, then returns fresh local state with its joint/Bone references reordered into descriptor-index order.
 
-The validation rejects mismatched target count, names, types, animated parents, Motor6D offsets, Bone bind transforms, duplicate targets, and cycles.
+The validation rejects mismatched target count, names, joint/Bone types, animated parents, joint offsets, Bone bind transforms, non-kinematic AnimationConstraints, duplicate targets, and cycles.
+Motor6D and kinematic AnimationConstraint targets are interchangeable when their target names, hierarchy, and offsets match.
 
 ### `create_rig_state(desc, motors?, bones?)`
 
 ```luau
 create_rig_state(
 	desc: RigDesc,
-	motors: { Motor6D? }?,
+	motors: { (Motor6D | AnimationConstraint)? }?,
 	bones: { Bone? }?
 ): RigState
 ```

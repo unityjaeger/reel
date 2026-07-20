@@ -27,7 +27,7 @@ Within each worker:
 1. Update local track states
 2. Call `solve_prepared()`
 3. Optionally apply delta layers and reconstruct world transforms
-4. Call `task.synchronize()` before assigning `Motor6D.Transform` or `Bone.Transform`
+4. Call `task.synchronize()` before assigning `Motor6D.Transform`, `AnimationConstraint.Transform`, or `Bone.Transform`
 
 Keep one descriptor and one binding per compatible asset/rig layout in that worker.
 Avoid splitting the solve for a single small rig across workers, the coordination cost usually dominates.

@@ -25,10 +25,12 @@ export type BlendScratch = {
 	group_touched: { number },
 }
 
+export type AnimationJoint = Motor6D | AnimationConstraint
+
 export type RigState = {
 	desc: RigDesc,
 
-	motors: { Motor6D? },
+	motors: { AnimationJoint? },
 	bones: { Bone? },
 
 	transforms: { CFrame },
@@ -46,7 +48,7 @@ type RawNode = {
 	name: string,
 
 	is_bone: boolean,
-	motor: Motor6D?,
+	motor: AnimationJoint?,
 	bone: Bone?,
 
 	c0: CFrame,
@@ -70,7 +72,7 @@ const function freeze_rig_desc(desc: RigDesc): RigDesc
 	return table.freeze(desc)
 end
 
-const function create_rig_state(desc: RigDesc, motors: { Motor6D? }?, bones: { Bone? }?): RigState
+const function create_rig_state(desc: RigDesc, motors: { AnimationJoint? }?, bones: { Bone? }?): RigState
 	local result: RigState = {
 		desc = desc,
 
@@ -153,12 +155,16 @@ const function read_raw_nodes(rig: Model): { RawNode }
 	local raw_nodes: { RawNode } = {}
 	local key_to_raw: { [Instance]: number } = {}
 
-	for order, motor: Motor6D in rig:QueryDescendants("Motor6D") do
+	for order, motor: AnimationJoint in rig:QueryDescendants("Motor6D, AnimationConstraint") do
 		local part0 = motor.Part0
 		local part1 = motor.Part1
 
 		if part0 == nil or part1 == nil then
-			error(`Motor6D has nil Part0/Part1: {motor:GetFullName()}`)
+			error(`{motor.ClassName} has nil Part0/Part1: {motor:GetFullName()}`)
+		end
+
+		if motor:IsA("AnimationConstraint") and not motor.IsKinematic then
+			error(`AnimationConstraint must have IsKinematic enabled: {motor:GetFullName()}`)
 		end
 
 		add_node(raw_nodes, key_to_raw, {
@@ -217,7 +223,7 @@ const function read_raw_nodes(rig: Model): { RawNode }
 	return raw_nodes
 end
 
-const function build_rig(raw_nodes: { RawNode }): (RigDesc, { Motor6D? }, { Bone? })
+const function build_rig(raw_nodes: { RawNode }): (RigDesc, { AnimationJoint? }, { Bone? })
 	local count = #raw_nodes
 	local desc: RigDesc = {
 		count = count,
@@ -230,7 +236,7 @@ const function build_rig(raw_nodes: { RawNode }): (RigDesc, { Motor6D? }, { Bone
 		bind = table.create(count) :: { CFrame },
 	}
 
-	local motors: { Motor6D? } = {}
+	local motors: { AnimationJoint? } = {}
 	local bones: { Bone? } = {}
 
 	local key_to_index: { [Instance]: number } = {}
@@ -260,7 +266,7 @@ const function build_rig(raw_nodes: { RawNode }): (RigDesc, { Motor6D? }, { Bone
 	return freeze_rig_desc(desc), motors, bones
 end
 
-const function read_rig(rig: Model): (RigDesc, { Motor6D? }, { Bone? })
+const function read_rig(rig: Model): (RigDesc, { AnimationJoint? }, { Bone? })
 	return build_rig(read_raw_nodes(rig))
 end
 
@@ -269,7 +275,7 @@ const function load_rig_desc(rig: Model): RigDesc
 	return desc
 end
 
-local function bind_raw_nodes(desc: RigDesc, raw_nodes: { RawNode }): ({ Motor6D? }, { Bone? })
+local function bind_raw_nodes(desc: RigDesc, raw_nodes: { RawNode }): ({ AnimationJoint? }, { Bone? })
 	if #raw_nodes ~= desc.count then
 		error(`rig target count mismatch: expected {desc.count}, got {#raw_nodes}`)
 	end
@@ -286,7 +292,7 @@ local function bind_raw_nodes(desc: RigDesc, raw_nodes: { RawNode }): ({ Motor6D
 		key_to_raw[node.key] = node
 	end
 
-	local motors: { Motor6D? } = {}
+	local motors: { AnimationJoint? } = {}
 	local bones: { Bone? } = {}
 
 	for index = 1, desc.count do
@@ -316,7 +322,7 @@ local function bind_raw_nodes(desc: RigDesc, raw_nodes: { RawNode }): ({ Motor6D
 		elseif not node.c0:FuzzyEq(desc.c0[index])
 			or not node.c1:Inverse():FuzzyEq(desc.c1_inv[index])
 		then
-			error(`rig C0/C1 is outside tolerance for Motor6D target "{name}"`)
+			error(`rig C0/C1 is outside tolerance for joint target "{name}"`)
 		end
 
 		motors[index] = node.motor

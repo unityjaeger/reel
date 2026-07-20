@@ -34,6 +34,14 @@ local function marker_keyframe(time: number, name: string, value: string): Keyfr
 	return keyframe
 end
 
+local function add_marker(keyframe: Keyframe, name: string, value: string): Keyframe
+	local marker = Instance.new("KeyframeMarker")
+	marker.Name = name
+	marker.Value = value
+	keyframe:AddMarker(marker)
+	return keyframe
+end
+
 return function(t: any, reel: any)
 	local test = t.test
 	local animation_load = reel.animation
@@ -222,6 +230,70 @@ return function(t: any, reel: any)
 			t.equal(arm.count, 3)
 			t.equal(#asset.markers, 1)
 			t.equal(asset.markers[1].time, 3)
+		end)
+	end)
+
+	test("extract_markers returns sorted immutable marker metadata and the full sequence length", function()
+		local sequence = fixtures.sequence({
+			fixtures.keyframe(4, {}),
+			add_marker(
+				fixtures.keyframe(2, {
+					fixtures.pose("Arm", CFrame.new(2, 0, 0)),
+				}),
+				"Footstep",
+				"Right"
+			),
+			marker_keyframe(0, "Started", ""),
+		})
+
+		with_destroy(sequence, function()
+			local marker_asset = animation_load.extract_markers(sequence)
+			local full_asset = animation_load.load_keyframe_sequence(sequence)
+
+			t.equal(marker_asset.length, 4)
+			t.equal(#marker_asset.markers, 2)
+			t.equal(marker_asset.markers[1].time, 0)
+			t.equal(marker_asset.markers[1].name, "Started")
+			t.equal(marker_asset.markers[1].value, "")
+			t.equal(marker_asset.markers[2].time, 2)
+			t.equal(marker_asset.markers[2].name, "Footstep")
+			t.equal(marker_asset.markers[2].value, "Right")
+
+			for index, marker in marker_asset.markers do
+				local full_marker = full_asset.markers[index]
+				t.equal(marker.time, full_marker.time)
+				t.equal(marker.name, full_marker.name)
+				t.equal(marker.value, full_marker.value)
+				t.truthy(table.isfrozen(marker))
+			end
+
+			t.truthy(table.isfrozen(marker_asset))
+			t.truthy(table.isfrozen(marker_asset.markers))
+		end)
+	end)
+
+	test("extract_markers returns an empty frozen asset for an empty sequence", function()
+		local sequence = fixtures.sequence({})
+
+		with_destroy(sequence, function()
+			local asset = animation_load.extract_markers(sequence)
+			t.equal(asset.length, 0)
+			t.equal(#asset.markers, 0)
+			t.truthy(table.isfrozen(asset))
+			t.truthy(table.isfrozen(asset.markers))
+		end)
+	end)
+
+	test("extract_markers enforces the same unsupported two-keyframe shape as the full loader", function()
+		local sequence = fixtures.sequence({
+			marker_keyframe(1, "Footstep", "Left"),
+			marker_keyframe(2, "Footstep", "Right"),
+		})
+
+		with_destroy(sequence, function()
+			t.errors(function()
+				animation_load.extract_markers(sequence)
+			end, "only 2 keyframes")
 		end)
 	end)
 

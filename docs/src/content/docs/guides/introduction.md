@@ -12,7 +12,7 @@ Either grab the .rbxm from the [latest release](https://github.com/unityjaeger/r
 
 or get it through wally:
 ```
-reel = "unityjaeger/reel@0.1.0"
+reel = "unityjaeger/reel@0.2.0"
 ```
 
 :::note
@@ -77,7 +77,7 @@ end)
 ```
 
 The one-track path does not need blend scratch.
-`solve_prepared()` writes only to `rig.transforms`, committing `Motor6D.Transform` and `Bone.Transform` remains the caller's responsibility.
+`solve_prepared()` writes only to `rig.transforms`; committing `Motor6D.Transform`, `AnimationConstraint.Transform`, and `Bone.Transform` remains the caller's responsibility.
 
 # Frame responsibilities
 

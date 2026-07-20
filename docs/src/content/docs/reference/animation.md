@@ -49,6 +49,18 @@ A player should consume `asset.markers` as its time position advances, typically
 When looping across the end, query the tail of the clip and then its beginning as two intervals.
 This keeps repeated, out-of-order, and parallel solver samples side-effect free.
 
+### `MarkerAsset`
+
+```luau
+type MarkerAsset = {
+	length: number,
+	markers: { Marker },
+}
+```
+
+This is the immutable marker-only representation returned by `extract_markers()`.
+Its `length` still uses the last source keyframe, even when that keyframe has no marker.
+
 ## `AnimationBinding`
 
 An immutable mapping between one asset and one rig layout:
@@ -81,6 +93,16 @@ Duplicate target names at one timestamp, ambiguous target paths across timestamp
 A sequence with exactly two source keyframes whose first keyframe is not at time zero is also rejected. Markers and poses both count because this preserves the source shape that avoids the unsupported two-keyframe behavior.
 
 Supported pose easing styles/directions are all the easing styles that roblox natively supports for KeyframeSequences.
+
+### `extract_markers(sequence)`
+
+```luau
+extract_markers(sequence: KeyframeSequence): MarkerAsset
+```
+
+Reads only the sequence length and marker records.
+Use it when marker playback metadata is needed without packing pose channels.
+It applies the same source-keyframe sorting and unsupported two-keyframe-shape validation as `load_keyframe_sequence()`.
 
 ### `bind_animation(asset, rig_or_desc)`
 

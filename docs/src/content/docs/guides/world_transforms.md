@@ -4,7 +4,7 @@ description: Explains how to generate world transforms.
 ---
 
 World reconstruction is separate from local solving.
-Skip it when you only need to commit `Motor6D.Transform` or `Bone.Transform` for playback.
+Skip it when you only need to commit a `Motor6D.Transform`, `AnimationConstraint.Transform`, or `Bone.Transform` for playback.
 
 ```luau
 solver.solve_prepared(rig, prepared)
@@ -29,8 +29,8 @@ Pass a preallocated array when you want that ownership explicit.
 Descriptor indices are parent before child, so reconstruction is one iterative pass with no Instance hierarchy traversal:
 
 ```
-Motor6D: parentWorld * C0 * localTransform * inverse(C1)
-Bone:    parentWorld * bindCFrame * localTransform
+Motor6D/AnimationConstraint: parentWorld * C0 * localTransform * inverse(C1)
+Bone:                        parentWorld * bindCFrame * localTransform
 ```
 
 The supplied root `CFrame` is used for every descriptor target whose parent index is zero.
